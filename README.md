@@ -1,6 +1,6 @@
 
-<H3>NAME: HARIHARAN J</H3>
-<H3>EREGISTER NO: 212223240047</H3>
+<H3>NAME: PREM KUMAR S</H3>
+<H3>EREGISTER NO: 212223240125</H3>
 <H3>EX. NO.4</H3>
 <H3>DATE:20.08.2026</H3>
 <H1 ALIGN =CENTER>Implementation of MLP with Backpropagation for Multiclassification</H1>
@@ -115,55 +115,99 @@ Normalize our dataset.
 8. Finally, call the functions confusion_matrix(), and the classification_report() in order to evaluate the performance of our classifier.
 
 <H3>Program:</H3> 
-
-```python 
+```
 import pandas as pd
-import sklearn
-from sklearn import preprocessing
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.svm import LinearSVC
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 
-drybean = pd.read_excel("/content/Dry_Bean_Dataset.xlsx")
+# 1. Load Dataset (Direct download for Google Colab)
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+columns = [
+    'Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness',
+    'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome'
+]
+diabetes_df = pd.read_csv(url, names=columns)
 
-drybean.head()
+# 2. Explore & Clean Zero Values
+print("Initial Shape:", diabetes_df.shape)
+diabetes_df = diabetes_df[diabetes_df['BloodPressure'] != 0]
+diabetes_df = diabetes_df[diabetes_df['Insulin'] != 0]
+diabetes_df = diabetes_df[diabetes_df['SkinThickness'] != 0]
+diabetes_df = diabetes_df[diabetes_df['Glucose'] != 0]
+diabetes_df = diabetes_df[diabetes_df['BMI'] != 0]
+print("Cleaned Shape:", diabetes_df.shape)
 
-X = drybean.iloc[:,0:4]
-X
+# 3. Visualization
+fig, ax = plt.subplots(2, 3, figsize=(12, 8))
+features_to_plot = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
+for i, col in enumerate(features_to_plot):
+    r, c = divmod(i, 3)
+    ax[r, c].scatter(diabetes_df[col], diabetes_df['Outcome'])
+    ax[r, c].set_title(col)
+plt.tight_layout()
+plt.show()
 
-y = drybean.select_dtypes(include=[object])
-y.head()
-X.head()
+# 4. Train-Test Split
+x = diabetes_df.drop('Outcome', axis=1)
+y = diabetes_df['Outcome']
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
-y.Class.unique()
+# 5. Multi-Model Evaluation
+def fMeasure(acc, prec, recall):
+    return 2 * (prec * recall) / (prec + recall) if (prec + recall) > 0 else 0
 
-le = preprocessing.LabelEncoder()
-y = y.apply(le.fit_transform)
-y.head()
+def model_results(model):
+    y_pred = model.predict(x_test)
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, zero_division=0)
+    recall = recall_score(y_test, y_pred, zero_division=0)
+    print(f"accuracy_score :  {acc}")
+    print(f"precision_score :  {prec}")
+    print(f"recall_score :  {recall}")
+    print(f"F-measure:  {fMeasure(acc, prec, recall)}")
+    print("\n----------------------------\n")
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20)
+models = {
+    "logistic_model": LogisticRegression(penalty='l2', C=1.0, solver='liblinear'),
+    "LinearDiscriminantAnalysis": LinearDiscriminantAnalysis(solver='svd'),
+    "QuadraticDiscriminantAnalysis": QuadraticDiscriminantAnalysis(),
+    "LinearSVC": LinearSVC(C=1.0, max_iter=1000, tol=1e-2, dual=False),
+    "DecisionTreeClassifier": DecisionTreeClassifier(),
+    "GaussianNB": GaussianNB()
+}
 
-scaler = StandardScaler()
-scaler.fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
+for name, model in models.items():
+    model.fit(x_train, y_train)
+    print(f"{name}:")
+    model_results(model)
 
-mlp = MLPClassifier(hidden_layer_sizes=(10, 10, 10), max_iter=1000)
-mlp.fit(X_train, y_train.values.ravel())
+# 6. Hyperparameter Tuning for QDA
+param_grid = {
+    'reg_param': [0, 0.1, 0.2, 0.3, 0.4, 0.5],
+    'store_covariance': [True, False],
+    'tol': [1.0e-3, 1.0e-4, 1.0e-5, 1.0e-6]
+}
+grid = GridSearchCV(QuadraticDiscriminantAnalysis(), param_grid, cv=10)
+grid.fit(x_train, y_train)
 
-predictions = mlp.predict(X_test)
-predictions
-
-confusion_matrix(y_test,predictions)
-
-print(classification_report(y_test,predictions))
+print("Best hyperparameters:", grid.best_params_)
+print("Best score:", grid.best_score_)
+print("Test accuracy:", grid.best_estimator_.score(x_test, y_test))
 ```
 
-<H3>Output:</H3>
 
-![alt text](image.png)
-![alt text](image-1.png)
+<H3>Output:</H3>
+<img width="1042" height="661" alt="image" src="https://github.com/user-attachments/assets/cee0b50e-21e6-474e-8e0b-868e6e64fdc7" />
+
+
+
+
 
 <H3>Result:</H3>
 Thus, MLP is implemented for multi-classification using python.
